@@ -82,7 +82,7 @@ func main() {
 }
 ```
 
-### Result
+Running this code will output:
 
 | img           |                                     |
 | :-----------: | :---------------------------------: |
