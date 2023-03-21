@@ -5,16 +5,18 @@ import (
 	"image"
 )
 
-type imageRGBAReader[T Number] struct {
+type imageRGBAFunc[T Number] struct {
+	FunctionXYC[T]
+
 	img *image.RGBA
+	fn  funcXYC[T]
 }
 
-func (r *imageRGBAReader[T]) XY(x, y Var) T {
-	pos := r.img.PixOffset(int(x), int(y))
-	return T(r.img.Pix[pos])
-}
+func (r *imageRGBAFunc[T]) XYC(x, y, ch Var) T {
+	if r.fn != nil {
+		return r.fn(x, y, ch)
+	}
 
-func (r *imageRGBAReader[T]) XYC(x, y, ch Var) T {
 	c := r.img.RGBAAt(int(x), int(y))
 	switch ch {
 	case 0:
@@ -29,8 +31,12 @@ func (r *imageRGBAReader[T]) XYC(x, y, ch Var) T {
 	panic(fmt.Sprintf("out of range ch:%d", int(ch)))
 }
 
-func ImageRGBA[T Number](img *image.RGBA) *Buffer[T] {
-	return &Buffer[T]{
-		in: &imageRGBAReader[T]{img},
+func (r *imageRGBAFunc[T]) SetXYC(fn funcXYC[T]) {
+	r.fn = fn
+}
+
+func ImageRGBA[T Number](img *image.RGBA) FunctionXYC[T] {
+	return &imageRGBAFunc[T]{
+		img: img,
 	}
 }

@@ -11,6 +11,34 @@ import (
 	"github.com/octu0/gax"
 )
 
+func blur3x3[T uint8](in gax.FunctionXYC[T]) gax.FunctionXYC[T] {
+	blurX := gax.FuncXYC[T]()
+	blurX.SetXYC(func(x, y, ch gax.Var) T {
+		if int(ch) == 3 {
+			return 255
+		}
+
+		val1 := int(in.XYC(x-1, y, ch))
+		val2 := int(in.XYC(x, y, ch))
+		val3 := int(in.XYC(x+1, y, ch))
+		return T((val1 + val2 + val3) / 3)
+	})
+
+	blurY := gax.FuncXYC[T]()
+	blurY.SetXYC(func(x, y, ch gax.Var) T {
+		if int(ch) == 3 {
+			return 255
+		}
+
+		val1 := int(blurX.XYC(x, y-1, ch))
+		val2 := int(blurX.XYC(x, y, ch))
+		val3 := int(blurX.XYC(x, y+1, ch))
+		return T((val1 + val2 + val3) / 3)
+	})
+
+	return blurY
+}
+
 func main() {
 	img, err := readImage("./src.png")
 	if err != nil {
@@ -19,33 +47,12 @@ func main() {
 
 	in := gax.ImageRGBA[uint8](img)
 
-	blurX := gax.Func[uint8]()
-	blurX.SetXYC(func(x, y, ch gax.Var) uint8 {
-		if int(ch) == 3 {
-			return 255
-		}
+	blur := blur3x3(in)
 
-		val1 := int(in.XYC(x-1, y, ch))
-		val2 := int(in.XYC(x, y, ch))
-		val3 := int(in.XYC(x+1, y, ch))
-		return uint8((val1 + val2 + val3) / 3)
-	})
+	out := blur.Realize(img.Rect.Dx(), img.Rect.Dy(), 4) // 4 = r,g,b,a
 
-	blurY := gax.Func[uint8]()
-	blurY.SetXYC(func(x, y, ch gax.Var) uint8 {
-		if int(ch) == 3 {
-			return 255
-		}
-
-		val1 := int(blurX.XYC(x, y-1, ch))
-		val2 := int(blurX.XYC(x, y, ch))
-		val3 := int(blurX.XYC(x, y+1, ch))
-		return uint8((val1 + val2 + val3) / 3)
-	})
-
-	out := blurY.Realize(img.Rect.Dx(), img.Rect.Dy(), 4) // 4 = r,g,b,a
 	outImg := &image.RGBA{
-		Pix:    out,
+		Pix:    out.Data(),
 		Stride: 4 * img.Rect.Dx(),
 		Rect:   image.Rect(0, 0, img.Rect.Dx(), img.Rect.Dy()),
 	}
